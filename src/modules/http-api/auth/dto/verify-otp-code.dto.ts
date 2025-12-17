@@ -5,9 +5,6 @@ export class VerifyOtpCodeDto {
   @Length(5, 5, { message: 'OTP code must be exactly 5 digits.' })
   code: string;
 
-  @IsMobilePhone("fa-IR")
-  phone: string
-
-  @IsString()
-  username:string
+  @IsMobilePhone('fa-IR')
+  phone: string;
 }

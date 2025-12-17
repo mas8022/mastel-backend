@@ -4,7 +4,8 @@ import { JwtModule } from './common/services/jwt/jwt.module';
 import { AuthModule } from './modules/http-api/auth/auth.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import { UsersModule } from './module/http-api/users/users.module';
+import { ChatModule } from './modules/real-time/chat/chat.module';
+import { UsersModule } from './modules/http-api/users/users.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { UsersModule } from './module/http-api/users/users.module';
     PrismaModule,
     JwtModule,
     AuthModule,
+    ChatModule,
     UsersModule,
   ],
   providers: [
