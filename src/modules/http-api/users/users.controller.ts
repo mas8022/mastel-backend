@@ -1,14 +1,22 @@
 import {
+  Body,
   Controller,
   Get,
   Headers,
   Param,
+  Put,
   Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UserGuard } from './user.guard';
 import type { FastifyRequest } from 'fastify';
+import {
+  FileFieldsInterceptor,
+  UploadedFiles,
+} from '@blazity/nest-file-fastify';
+import { EditProfileDto } from './dto/edit-profile.dto';
 
 @Controller('users')
 export class UsersController {
@@ -21,12 +29,24 @@ export class UsersController {
 
   @Get('me')
   async getMe(@Headers('cookie') rawCookie: string) {
-    return this.usersService.getMe(rawCookie);
+    const me = await this.usersService.getMe(rawCookie);
+    return me ? { status: 200, data: me } : { status: 500, data: null };
   }
 
   @UseGuards(UserGuard)
   @Get('contacts')
   async getContact(@Req() req: FastifyRequest) {
     return await this.usersService.getContact(req);
+  }
+
+  @UseGuards(UserGuard)
+  @UseInterceptors(FileFieldsInterceptor([{ name: 'avatar', maxCount: 1 }]))
+  @Put('profile')
+  async editProfile(
+    @Req() req: FastifyRequest,
+    @UploadedFiles() files: any,
+    @Body() body: EditProfileDto,
+  ) {
+    return await this.usersService.editProfile(req, files, body);
   }
 }

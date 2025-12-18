@@ -6,6 +6,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { ChatModule } from './modules/real-time/chat/chat.module';
 import { UsersModule } from './modules/http-api/users/users.module';
+import { BucketModule } from './common/services/bucket/bucket.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { UsersModule } from './modules/http-api/users/users.module';
     AuthModule,
     ChatModule,
     UsersModule,
+    BucketModule,
   ],
   providers: [
     {

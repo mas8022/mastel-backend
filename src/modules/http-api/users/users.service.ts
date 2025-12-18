@@ -3,12 +3,16 @@ import { PrismaService } from 'src/common/services/prisma/prisma.service';
 import { parse } from 'cookie';
 import { JwtService } from 'src/common/services/jwt/jwt.service';
 import type { FastifyRequest } from 'fastify';
+import { EditProfileDto } from './dto/edit-profile.dto';
+import { FileValidator } from 'src/common/validators/file.validator';
+import { BucketService } from 'src/common/services/bucket/bucket.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly bucketService: BucketService,
   ) {}
 
   async findUsers(search: string) {
@@ -78,5 +82,44 @@ export class UsersService {
     const contacts = Array.from(contactsMap.values());
 
     return { status: 200, data: contacts };
+  }
+
+  async editProfile(
+    req: FastifyRequest,
+    files: any,
+    { username, bio }: EditProfileDto,
+  ) {
+    const me = req.user;
+
+    let avatarAddress: string | null = null;
+
+    if (files?.avatar?.[0]) {
+      const file = files.avatar[0];
+
+      FileValidator.validateJpgFile(file);
+
+      avatarAddress = await this.bucketService.uploadFile(file);
+    }
+
+    const updateData: any = {
+      username,
+      bio,
+    };
+
+    if (avatarAddress) {
+      updateData.avatar = avatarAddress;
+    }
+
+    await this.prismaService.user.update({
+      where: {
+        id: me?.id,
+      },
+      data: updateData,
+    });
+
+    return {
+      status: 200,
+      message: 'ویرایش با موفقیت انجام شد',
+    };
   }
 }
