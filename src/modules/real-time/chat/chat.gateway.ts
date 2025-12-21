@@ -4,18 +4,40 @@ import {
   MessageBody,
   WebSocketServer,
   ConnectedSocket,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { ChatService } from './chat.service';
 import { Server, Socket } from 'socket.io';
 import { SendMessageDto } from './dto/send-message';
+import { UseGuards } from '@nestjs/common';
+import { UserGuard } from './user.guard';
 
+@UseGuards(UserGuard)
 @WebSocketGateway({
   cors: { origin: process.env.FRONTEND_URL, credentials: true },
   namespace: '/chat',
 })
-export class ChatGateway {
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(private readonly chatService: ChatService) {}
+
   @WebSocketServer() server: Server;
+
+  async handleConnection(client: Socket) {
+    this.chatService.sendOnlineStatus(this.server, client, true);
+  }
+
+  async handleDisconnect(client: Socket) {
+    this.chatService.sendOnlineStatus(this.server, client, false);
+  }
+
+  @SubscribeMessage('get-online-status-contact')
+  async getOnlineStatusContact(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() contactId: string,
+  ) {
+    this.chatService.getOnlineStatusContact(this.server, client, contactId);
+  }
 
   @SubscribeMessage('send-message')
   sendMessage(

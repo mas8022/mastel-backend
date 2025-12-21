@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/common/services/prisma/prisma.service';
 import { parse } from 'cookie';
 import { JwtService } from 'src/common/services/jwt/jwt.service';
@@ -43,43 +43,21 @@ export class UsersService {
     }
   }
 
-  async getContact(req: FastifyRequest) {
+  async getContacts(req: FastifyRequest) {
     const me = req.user;
 
-    const chats = await this.prismaService.message.findMany({
-      where: {
-        OR: [{ senderId: me?.id }, { receiverId: me?.id }],
-      },
+    const rawContacts = await this.prismaService.contact.findMany({
+      where: { OR: [{ firstUserId: me?.id }, { secondUserId: me?.id }] },
       select: {
-        sender: {
-          select: {
-            id: true,
-            avatar: true,
-            username: true,
-          },
-        },
-        receiver: {
-          select: {
-            id: true,
-            avatar: true,
-            username: true,
-          },
-        },
+        firstUser: { select: { id: true, avatar: true, username: true } },
+        secondUser: { select: { id: true, avatar: true, username: true } },
       },
-      orderBy: { id: 'desc' },
     });
 
-    const contactsMap = new Map<number, any>();
-
-    for (const chat of chats) {
-      if (chat.sender.id !== me?.id) {
-        contactsMap.set(chat.sender.id, chat.sender);
-      } else if (chat.receiver.id !== me?.id) {
-        contactsMap.set(chat.receiver.id, chat.receiver);
-      }
-    }
-
-    const contacts = Array.from(contactsMap.values());
+    const contacts = rawContacts.map((item) => {
+      if (item.firstUser.id !== me?.id) return item.firstUser;
+      if (item.secondUser.id !== me.id) return item.secondUser;
+    });
 
     return { status: 200, data: contacts };
   }
@@ -121,5 +99,21 @@ export class UsersService {
       status: 200,
       message: 'ویرایش با موفقیت انجام شد',
     };
+  }
+
+  async getContact(id: string) {
+    const contact = await this.prismaService.user.findUnique({
+      where: { id: Number(id) },
+      select: {
+        avatar: true,
+        bio: true,
+        id: true,
+        username: true,
+      },
+    });
+
+    if (!contact) throw new NotFoundException('این کاربر وجود ندارد');
+
+    return { status: 200, data: contact };
   }
 }

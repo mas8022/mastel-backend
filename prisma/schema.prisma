@@ -19,6 +19,8 @@ model User {
 
   sentMessages     Message[] @relation("sender")
   receivedMessages Message[] @relation("receiver")
+  firstUsers       Contact[] @relation("firstUser")
+  secondUsers      Contact[] @relation("secondUser")
 }
 
 model Otp {
@@ -39,7 +41,7 @@ model Session {
 }
 
 model Message {
-  id      Int    @id @default(autoincrement())
+  id   Int    @id @default(autoincrement())
   text String
 
   senderId Int
@@ -53,4 +55,14 @@ model Message {
 
   @@index([senderId, receiverId])
   @@index([receiverId, senderId])
+}
+
+model Contact {
+  id           Int  @id @default(autoincrement())
+  firstUserId  Int
+  firstUser    User @relation("firstUser", fields: [firstUserId], references: [id])
+  secondUserId Int
+  secondUser   User @relation("secondUser", fields: [secondUserId], references: [id])
+
+  @@index([firstUserId, secondUserId])
 }

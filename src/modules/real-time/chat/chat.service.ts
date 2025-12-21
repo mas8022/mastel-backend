@@ -8,20 +8,102 @@ import { UsersService } from 'src/modules/http-api/users/users.service';
 export class ChatService {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly userservice: UsersService,
+    private readonly userService: UsersService,
   ) {}
+
+  private users = new Map<
+    number,
+    { sockets: Set<string>; isOnline: boolean }
+  >();
+
+  async sendOnlineStatus(server: Server, client: Socket, isOnline: boolean) {
+    const rawCookies: any = client.handshake.headers.cookie;
+    const me: any = await this.userService.getMe(rawCookies);
+
+    if (!me) return;
+
+    const user = this.users.get(me?.id) ?? {
+      sockets: new Set<string>(),
+      isOnline: false,
+    };
+
+    if (isOnline) {
+      user.isOnline = true;
+      user.sockets.add(client.id);
+    } else {
+      user.sockets.delete(client.id);
+
+      if (user.sockets.size === 0) {
+        user.isOnline = false;
+      }
+    }
+
+    this.users.set(me.id, user);
+
+    const rawContacts = await this.prismaService.contact.findMany({
+      where: { OR: [{ firstUserId: me.id }, { secondUserId: me.id }] },
+      select: {
+        firstUser: { select: { id: true } },
+        secondUser: { select: { id: true } },
+      },
+    });
+
+    const contactsId = rawContacts.map((item) =>
+      item.firstUser.id !== me.id ? item.firstUser.id : item.secondUser.id,
+    );
+
+    for (const contactId of contactsId) {
+      const contact = this.users.get(contactId!);
+
+      if (!contact) continue;
+
+      for (const contactSocketId of contact.sockets) {
+        server.to(contactSocketId).emit('get-online-status', {
+          userId: me.id,
+          isOnline: user.isOnline,
+        });
+      }
+    }
+  }
+
+  async getOnlineStatusContact(
+    server: Server,
+    client: Socket,
+    contactId: string,
+  ) {
+    const contact = this.users.get(Number(contactId));
+
+    client.emit('get-online-status-contact', {
+      userId: contactId,
+      isOnline: contact?.isOnline,
+    });
+  }
 
   async sendMessage(
     server: Server,
     client: Socket,
     { contactId, message }: SendMessageDto,
   ) {
-    const rawCookie: any = client.handshake.headers.cookie;
-
-    const me: any = await this.userservice.getMe(rawCookie);
+    const me = client.data.user;
 
     const senderId = me.id;
     const receiverId = Number(contactId);
+
+    const isChatExist = await this.prismaService.contact.findFirst({
+      where: {
+        OR: [
+          { firstUserId: senderId, secondUserId: receiverId },
+          { firstUserId: receiverId, secondUserId: senderId },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (!isChatExist) {
+      await this.prismaService.contact.create({
+        data: { firstUserId: senderId, secondUserId: receiverId },
+      });
+    }
 
     await this.prismaService.message.create({
       data: { text: message, senderId, receiverId },
@@ -43,9 +125,7 @@ export class ChatService {
   }
 
   async getMessages(server: Server, client: Socket, contactId: string) {
-    const rawCookie: any = client.handshake.headers.cookie;
-
-    const me: any = await this.userservice.getMe(rawCookie);
+    const me = client.data.user;
 
     const senderId = me.id;
     const receiverId = Number(contactId);

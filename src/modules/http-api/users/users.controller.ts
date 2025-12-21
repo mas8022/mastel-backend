@@ -35,8 +35,8 @@ export class UsersController {
 
   @UseGuards(UserGuard)
   @Get('contacts')
-  async getContact(@Req() req: FastifyRequest) {
-    return await this.usersService.getContact(req);
+  async getContacts(@Req() req: FastifyRequest) {
+    return await this.usersService.getContacts(req);
   }
 
   @UseGuards(UserGuard)
@@ -48,5 +48,10 @@ export class UsersController {
     @Body() body: EditProfileDto,
   ) {
     return await this.usersService.editProfile(req, files, body);
+  }
+
+  @Get('contact/:id')
+  async getContact(@Param('id') id: string) {
+    return await this.usersService.getContact(id);
   }
 }
