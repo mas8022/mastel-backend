@@ -15,20 +15,6 @@ export class UsersService {
     private readonly bucketService: BucketService,
   ) {}
 
-  async findUsers(search: string) {
-    const users = await this.prismaService.user.findMany({
-      where: {
-        OR: [
-          { phone: { contains: search, mode: 'insensitive' } },
-          { username: { contains: search, mode: 'insensitive' } },
-        ],
-      },
-      take: 5,
-    });
-
-    return { status: 200, data: users };
-  }
-
   async getMe(rawCookies: string) {
     try {
       const { access_token }: any = parse(rawCookies || '');
@@ -41,6 +27,25 @@ export class UsersService {
     } catch (error) {
       return null;
     }
+  }
+
+  async findUsers(search: string, req: FastifyRequest) {
+    const me = req.user;
+
+    const users = await this.prismaService.user.findMany({
+      where: {
+        OR: [
+          { phone: { contains: search, mode: 'insensitive' } },
+          { username: { contains: search, mode: 'insensitive' } },
+        ],
+        NOT: {
+          id: me?.id,
+        },
+      },
+      take: 5,
+    });
+
+    return { status: 200, data: users };
   }
 
   async getContacts(req: FastifyRequest) {

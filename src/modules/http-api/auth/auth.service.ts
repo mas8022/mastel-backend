@@ -66,7 +66,7 @@ export class AuthService {
       let username: string = '';
 
       while (true) {
-        username = 'user_' + Math.random().toString(36).substring(2, 10);
+        username = Math.random().toString(36).substring(2, 10);
 
         const isExist = await this.prismaService.user.findUnique({
           where: { username },

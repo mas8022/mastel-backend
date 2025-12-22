@@ -19,6 +19,13 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Throttle({ default: { limit: 5, ttl: 60 } })
+  @Post('send-otp')
+  async sendOtp(@Body() body: PhoneDto, @Res() res: FastifyReply) {
+    const result = await this.authService.sendOtp(body);
+    return res.send(result);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60 } })
   @Post('verify-otp')
   async verifyOtp(@Body() body: VerifyOtpCodeDto, @Res() res: FastifyReply) {
     const { message, status, accessToken, sessionId } =
@@ -43,13 +50,6 @@ export class AuthController {
     }
 
     return res.send({ status, message });
-  }
-
-  @Throttle({ default: { limit: 5, ttl: 60 } })
-  @Post('send-otp')
-  async sendOtp(@Body() body: PhoneDto, @Res() res: FastifyReply) {
-    const result = await this.authService.sendOtp(body);
-    return res.send(result);
   }
 
   @Get('refresh')
