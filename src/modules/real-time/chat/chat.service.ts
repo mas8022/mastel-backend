@@ -4,6 +4,7 @@ import { PrismaService } from 'src/common/services/prisma/prisma.service';
 import { Server, Socket } from 'socket.io';
 import { UsersService } from 'src/modules/http-api/users/users.service';
 import { DeleteMessageDto } from './dto/delete-message.dto';
+import { EditMessageDto } from './dto/edit-message.dto';
 
 @Injectable()
 export class ChatService {
@@ -154,6 +155,19 @@ export class ChatService {
 
     await this.prismaService.message.delete({
       where: { id: Number(messageId), senderId: client.data.user.id },
+    });
+
+    this.getMessages(server, client, contactId);
+  }
+
+  async editMessage(
+    server: Server,
+    client: Socket,
+    { messageId, text, contactId }: EditMessageDto,
+  ) {
+    await this.prismaService.message.update({
+      where: { id: messageId },
+      data: { text },
     });
 
     this.getMessages(server, client, contactId);

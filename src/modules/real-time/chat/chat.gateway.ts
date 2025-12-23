@@ -13,6 +13,7 @@ import { SendMessageDto } from './dto/send-message';
 import { UseGuards } from '@nestjs/common';
 import { UserGuard } from './user.guard';
 import { DeleteMessageDto } from './dto/delete-message.dto';
+import { EditMessageDto } from './dto/edit-message.dto';
 
 @UseGuards(UserGuard)
 @WebSocketGateway({
@@ -60,9 +61,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async deleteMessage(
     @ConnectedSocket() client: Socket,
     @MessageBody() body: DeleteMessageDto,
-
-    
   ) {
     this.chatService.deleteMessage(this.server, client, body);
+  }
+
+  @SubscribeMessage('edit-message')
+  async editMessage(
+    @ConnectedSocket() client:Socket,
+    @MessageBody() body: EditMessageDto,
+  ) {
+    this.chatService.editMessage(this.server, client, body);
   }
 }
