@@ -72,6 +72,17 @@ export class UsersService {
     files: any,
     { username, bio }: EditProfileDto,
   ) {
+    const isExistUsername = await this.prismaService.user.findFirst({
+      where: { username: username.trim() },
+    });
+
+    if (isExistUsername) {
+      return {
+        status: 405,
+        message: 'این نام کاربری گرفته شده است',
+      };
+    }
+
     const me = req.user;
 
     let avatarAddress: string | null = null;
