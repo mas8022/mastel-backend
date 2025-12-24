@@ -38,7 +38,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() contactId: string,
   ) {
-    this.chatService.getOnlineStatusContact(this.server, client, contactId);
+    this.chatService.getOnlineStatusContact(client, contactId);
   }
 
   @SubscribeMessage('send-message')
@@ -67,7 +67,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('edit-message')
   async editMessage(
-    @ConnectedSocket() client:Socket,
+    @ConnectedSocket() client: Socket,
     @MessageBody() body: EditMessageDto,
   ) {
     this.chatService.editMessage(this.server, client, body);

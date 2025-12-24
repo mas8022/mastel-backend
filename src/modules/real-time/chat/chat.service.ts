@@ -68,11 +68,7 @@ export class ChatService {
     }
   }
 
-  async getOnlineStatusContact(
-    server: Server,
-    client: Socket,
-    contactId: string,
-  ) {
+  async getOnlineStatusContact(client: Socket, contactId: string) {
     const contact = this.users.get(Number(contactId));
 
     client.emit('get-online-status-contact', {
@@ -84,7 +80,7 @@ export class ChatService {
   async sendMessage(
     server: Server,
     client: Socket,
-    { contactId, message }: SendMessageDto,
+    { contactId, message, replyToId }: SendMessageDto,
   ) {
     const me = client.data.user;
 
@@ -108,22 +104,10 @@ export class ChatService {
     }
 
     await this.prismaService.message.create({
-      data: { text: message, senderId, receiverId },
+      data: { text: message, senderId, receiverId, replyToId },
     });
 
-    const messages = await this.prismaService.message.findMany({
-      where: {
-        OR: [
-          { senderId, receiverId },
-          { senderId: receiverId, receiverId: senderId },
-        ],
-      },
-    });
-
-    const room1 = `${senderId}-${receiverId}`;
-    const room2 = `${receiverId}-${senderId}`;
-
-    server.to(room1).to(room2).emit('get-messages', messages);
+    this.getMessages(server, client, contactId);
   }
 
   async getMessages(server: Server, client: Socket, contactId: string) {
@@ -138,6 +122,9 @@ export class ChatService {
           { senderId, receiverId },
           { senderId: receiverId, receiverId: senderId },
         ],
+      },
+      include: {
+        replyTo: true,
       },
     });
 

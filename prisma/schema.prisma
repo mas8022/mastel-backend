@@ -44,6 +44,10 @@ model Message {
   id   Int    @id @default(autoincrement())
   text String
 
+  replyToId Int?
+  replyTo   Message?  @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies   Message[] @relation("MessageReplies")
+
   senderId Int
   sender   User @relation("sender", fields: [senderId], references: [id])
 
