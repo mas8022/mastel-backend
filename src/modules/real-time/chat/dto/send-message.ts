@@ -1,5 +1,15 @@
 export class SendMessageDto {
-  message: string;
   contactId: string;
-  replyToId?: number;
+
+  type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE';
+
+  text?: string;
+
+  fileUrl?: string;
+  fileKey?: string;
+  mimeType?: string;
+  size?: number;
+  duration?: number;
+
+  replyToId?: number | null;
 }

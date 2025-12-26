@@ -5,6 +5,7 @@ import { Server, Socket } from 'socket.io';
 import { UsersService } from 'src/modules/http-api/users/users.service';
 import { DeleteMessageDto } from './dto/delete-message.dto';
 import { EditMessageDto } from './dto/edit-message.dto';
+import { getVideoDurationInSeconds } from 'get-video-duration';
 
 @Injectable()
 export class ChatService {
@@ -77,37 +78,37 @@ export class ChatService {
     });
   }
 
-  async sendMessage(
-    server: Server,
-    client: Socket,
-    { contactId, message, replyToId }: SendMessageDto,
-  ) {
+  async sendMessage(server: Server, client: Socket, data: SendMessageDto) {
     const me = client.data.user;
 
     const senderId = me.id;
-    const receiverId = Number(contactId);
+    const receiverId = Number(data.contactId);
 
-    const isChatExist = await this.prismaService.contact.findFirst({
-      where: {
-        OR: [
-          { firstUserId: senderId, secondUserId: receiverId },
-          { firstUserId: receiverId, secondUserId: senderId },
-        ],
-      },
-      select: { id: true },
-    });
+    const fileUrl = `${process.env.LIARA_ENDPOINT}/${process.env.LIARA_BUCKET_NAME}/${data.fileKey}`;
 
-    if (!isChatExist) {
-      await this.prismaService.contact.create({
-        data: { firstUserId: senderId, secondUserId: receiverId },
-      });
+    let duration: any = null;
+    if (data.type === 'VIDEO' || data.type === 'VOICE') {
+      duration = await getVideoDurationInSeconds(fileUrl).then((result: any) =>
+        Math.round(result),
+      );
     }
 
     await this.prismaService.message.create({
-      data: { text: message, senderId, receiverId, replyToId },
+      data: {
+        type: data.type,
+        text: data.text,
+        fileUrl,
+        fileKey: data.fileKey,
+        mimeType: data.mimeType,
+        size: data.size,
+        duration,
+        senderId,
+        receiverId,
+        replyToId: data.replyToId ?? null,
+      },
     });
 
-    this.getMessages(server, client, contactId);
+    this.getMessages(server, client, data.contactId);
   }
 
   async getMessages(server: Server, client: Socket, contactId: string) {

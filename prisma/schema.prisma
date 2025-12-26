@@ -41,15 +41,24 @@ model Session {
 }
 
 model Message {
-  id   Int    @id @default(autoincrement())
-  text String
+  id        Int         @id @default(autoincrement())
+  type      MessageType
+
+  text      String?
+
+  fileUrl   String?
+  fileKey   String?
+  mimeType  String?
+  size      Int?
+
+  duration  Int?
 
   replyToId Int?
   replyTo   Message?  @relation("MessageReplies", fields: [replyToId], references: [id])
   replies   Message[] @relation("MessageReplies")
 
-  senderId Int
-  sender   User @relation("sender", fields: [senderId], references: [id])
+  senderId  Int
+  sender    User @relation("sender", fields: [senderId], references: [id])
 
   receiverId Int
   receiver   User @relation("receiver", fields: [receiverId], references: [id])
@@ -58,7 +67,14 @@ model Message {
   updatedAt DateTime @updatedAt
 
   @@index([senderId, receiverId])
-  @@index([receiverId, senderId])
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  VOICE
+  FILE
 }
 
 model Contact {

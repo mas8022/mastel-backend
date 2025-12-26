@@ -7,6 +7,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ChatModule } from './modules/real-time/chat/chat.module';
 import { UsersModule } from './modules/http-api/users/users.module';
 import { BucketModule } from './common/services/bucket/bucket.module';
+import { UploadModule } from './modules/http-api/upload/upload.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { BucketModule } from './common/services/bucket/bucket.module';
     ChatModule,
     UsersModule,
     BucketModule,
+    UploadModule,
   ],
   providers: [
     {
