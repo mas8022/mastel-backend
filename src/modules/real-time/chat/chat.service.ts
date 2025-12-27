@@ -79,6 +79,7 @@ export class ChatService {
   }
 
   async sendMessage(server: Server, client: Socket, data: SendMessageDto) {
+
     const me = client.data.user;
 
     const senderId = me.id;
