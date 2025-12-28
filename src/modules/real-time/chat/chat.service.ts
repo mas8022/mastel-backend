@@ -6,43 +6,39 @@ import { UsersService } from 'src/modules/http-api/users/users.service';
 import { DeleteMessageDto } from './dto/delete-message.dto';
 import { EditMessageDto } from './dto/edit-message.dto';
 import { getVideoDurationInSeconds } from 'get-video-duration';
+import { RedisService } from 'src/common/services/redis/redis.service';
 
 @Injectable()
 export class ChatService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly userService: UsersService,
+    private readonly redisService: RedisService,
   ) {}
-
-  private users = new Map<
-    number,
-    { sockets: Set<string>; isOnline: boolean }
-  >();
 
   async sendOnlineStatus(server: Server, client: Socket, isOnline: boolean) {
     const rawCookies: any = client.handshake.headers.cookie;
     const me: any = await this.userService.getMe(rawCookies);
-
     if (!me) return;
 
-    const user = this.users.get(me?.id) ?? {
-      sockets: new Set<string>(),
-      isOnline: false,
-    };
+    const socketsKey = `user:${me.id}:sockets`;
+    const onlineKey = `user:${me.id}:online`;
 
     if (isOnline) {
-      user.isOnline = true;
-      user.sockets.add(client.id);
+      // add socket
+      await this.redisService.client.sadd(socketsKey, client.id);
+      await this.redisService.client.set(onlineKey, '1');
     } else {
-      user.sockets.delete(client.id);
+      // remove socket
+      await this.redisService.client.srem(socketsKey, client.id);
 
-      if (user.sockets.size === 0) {
-        user.isOnline = false;
+      const count = await this.redisService.client.scard(socketsKey);
+      if (count === 0) {
+        await this.redisService.client.set(onlineKey, '0');
       }
     }
 
-    this.users.set(me.id, user);
-
+    // پیدا کردن مخاطبین
     const rawContacts = await this.prismaService.contact.findMany({
       where: { OR: [{ firstUserId: me.id }, { secondUserId: me.id }] },
       select: {
@@ -55,31 +51,32 @@ export class ChatService {
       item.firstUser.id !== me.id ? item.firstUser.id : item.secondUser.id,
     );
 
+    // اطلاع دادن وضعیت آنلاین
     for (const contactId of contactsId) {
-      const contact = this.users.get(contactId!);
+      const contactSocketsKey = `user:${contactId}:sockets`;
+      const sockets =
+        await this.redisService.client.smembers(contactSocketsKey);
 
-      if (!contact) continue;
-
-      for (const contactSocketId of contact.sockets) {
-        server.to(contactSocketId).emit('get-online-status', {
+      for (const socketId of sockets) {
+        server.to(socketId).emit('get-online-status', {
           userId: me.id,
-          isOnline: user.isOnline,
+          isOnline,
         });
       }
     }
   }
 
   async getOnlineStatusContact(client: Socket, contactId: string) {
-    const contact = this.users.get(Number(contactId));
+    const onlineKey = `user:${contactId}:online`;
+    const isOnline = (await this.redisService.client.get(onlineKey)) === '1';
 
     client.emit('get-online-status-contact', {
       userId: contactId,
-      isOnline: contact?.isOnline,
+      isOnline,
     });
   }
 
   async sendMessage(server: Server, client: Socket, data: SendMessageDto) {
-
     const me = client.data.user;
 
     const senderId = me.id;
@@ -92,6 +89,21 @@ export class ChatService {
       duration = await getVideoDurationInSeconds(fileUrl).then((result: any) =>
         Math.round(result),
       );
+    }
+
+    const isExistContact = await this.prismaService.contact.findFirst({
+      where: {
+        OR: [
+          { firstUserId: senderId, secondUserId: receiverId },
+          { firstUserId: receiverId, secondUserId: senderId },
+        ],
+      },
+    });
+
+    if (!isExistContact) {
+      await this.prismaService.contact.create({
+        data: { firstUserId: senderId, secondUserId: receiverId },
+      });
     }
 
     await this.prismaService.message.create({

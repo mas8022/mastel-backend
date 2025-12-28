@@ -8,6 +8,8 @@ import { ChatModule } from './modules/real-time/chat/chat.module';
 import { UsersModule } from './modules/http-api/users/users.module';
 import { BucketModule } from './common/services/bucket/bucket.module';
 import { UploadModule } from './modules/http-api/upload/upload.module';
+import { CallModule } from './modules/real-time/call/call.module';
+import { RedisModule } from './common/services/redis/redis.module';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { UploadModule } from './modules/http-api/upload/upload.module';
     UsersModule,
     BucketModule,
     UploadModule,
+    CallModule,
+    RedisModule,
   ],
   providers: [
     {

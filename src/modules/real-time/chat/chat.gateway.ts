@@ -21,7 +21,9 @@ import { EditMessageDto } from './dto/edit-message.dto';
   namespace: '/chat',
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+  ) {}
 
   @WebSocketServer() server: Server;
 
